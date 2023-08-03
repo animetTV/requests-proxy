@@ -1,8 +1,25 @@
 import express from "express";
 import axios from "axios";
+import cors from "cors";
+
 const app = express();
 
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3000;
+
+// List of allowed origins
+const whitelist = ["example.com"];
+
+// middleware to check origin
+const corsOptions = {
+  origin: function (origin, callback) {
+    console.log(origin);
+    if (whitelist.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+  },
+};
 
 // https://stackoverflow.com/questions/1714786/query-string-encoding-of-a-javascript-object
 const serialize = (obj) => {
@@ -102,7 +119,28 @@ const concatHeaders = (...args) => {
   return totalHeaders;
 };
 
-app.get("/proxy", async (req, res) => {
+// Error handling middleware
+app.use((req, res, next) => {
+  if (!req.get('Access-Control-Allow-Origin')) {
+    res.status(418).send(`
+    <html>
+      <head>
+        <title>Leave us alone!</title>
+      </head>
+      
+      <h1 style="color:#11111">Unauthorized origin.</h1><br>
+      <h2>You shall not pass!</h2>
+      <img src="https://media.tenor.com/VOdWjm2zbEAAAAAC/gandalf-sax-guy.gif" width="50%" />
+    </html>
+    
+    `);
+  } else {
+    next();
+  }
+});
+
+
+app.get("/proxy", cors(corsOptions), async (req, res) => {
   const query = composeQuery(req.query);
 
   const {
